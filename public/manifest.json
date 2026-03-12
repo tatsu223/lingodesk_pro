@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Gemini English Tutor",
+  "name": "LingoDesk(pro)",
   "version": "1.0.0",
   "description": "Analyze English text with Gemini directly in Chrome",
   "permissions": [

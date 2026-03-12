@@ -412,10 +412,7 @@ function App() {
     // CEFR level
     const [cefrLevel, setCefrLevel] = useState(localStorage.getItem('lingodesk_cefr') || 'B1');
 
-    const [sourceText, setSourceText] = useState(() => {
-        const saved = localStorage.getItem('lingodesk_source') || '';
-        return (saved.includes('ここに英単語') || saved.includes('ここに解析結果')) ? '' : saved;
-    });
+    const [sourceText, setSourceText] = useState('');
 
     // Model selection
     const [availableModels, setAvailableModels] = useState<string[]>([]);

@@ -1,6 +1,6 @@
 {
-  "name": "LingoDesk",
-  "short_name": "LingoDesk",
+  "name": "LingoDesk(pro)",
+  "short_name": "LingoDesk(pro)",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1a5e",

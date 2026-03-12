@@ -393,7 +393,6 @@ const WritingResultDisplay = memo(({ result, mode }: { result: WritingResult; mo
 // ==========================================
 function App() {
     const [view, setView] = useState<AppView>('main');
-    const [sourceText, setSourceText] = useState('');
     const [resultContent, setResultContent] = useState('');
     const [tutorSentences, setTutorSentences] = useState<TutorSentence[]>([]);
     const [tutorPreamble, setTutorPreamble] = useState('');
@@ -412,6 +411,11 @@ function App() {
 
     // CEFR level
     const [cefrLevel, setCefrLevel] = useState(localStorage.getItem('lingodesk_cefr') || 'B1');
+
+    const [sourceText, setSourceText] = useState(() => {
+        const saved = localStorage.getItem('lingodesk_source') || '';
+        return (saved.includes('ここに英単語') || saved.includes('ここに解析結果')) ? '' : saved;
+    });
 
     // Model selection
     const [availableModels, setAvailableModels] = useState<string[]>([]);
@@ -1065,7 +1069,7 @@ function App() {
                     <div className="input-workspace">
                         <textarea
                             className="main-textarea"
-                            placeholder="ここに英単語・英文・日本文をペーストしてください。"
+                            placeholder=""
                             value={sourceText}
                             onChange={(e) => setSourceText(e.target.value)}
                         />

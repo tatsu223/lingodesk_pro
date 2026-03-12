@@ -1065,7 +1065,7 @@ function App() {
                     <div className="input-workspace">
                         <textarea
                             className="main-textarea"
-                            placeholder="ここに学習・解析したい英文をコピー＆ペーストしてください..."
+                            placeholder="ここに英単語・英文・日本文をペーストしてください。"
                             value={sourceText}
                             onChange={(e) => setSourceText(e.target.value)}
                         />

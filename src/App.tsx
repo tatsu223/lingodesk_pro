@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { BookOpen, Search, BookMarked, Settings, ArrowLeft, Key, ChevronDown, Copy, Check, Mail, Share2, Sparkles, PenLine } from 'lucide-react';
 import {
     analyzeTextStream,
@@ -57,8 +57,8 @@ function escapeHtml(text: string): string {
 function applyInline(html: string): string {
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    html = html.replace(/`(.+?)`/g, '<code class="inline-code">$1</code>');
     html = html.replace(/"([^"]+)"/g, '<span class="phrase">"$1"</span>');
+    html = html.replace(/`(.+?)`/g, "<code class='inline-code'>$1</code>");
     return html;
 }
 
@@ -67,46 +67,105 @@ function applyInline(html: string): string {
 // ==========================================
 function formatMarkdown(text: string): string {
     if (text.includes('error-display')) return text;
+
     const lines = text.split('\n');
     const parts: string[] = [];
     let inBlockquote = false;
     let blockquoteLines: string[] = [];
+    let inWordBlock = false;
 
     for (const line of lines) {
         if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
-            if (inBlockquote) { parts.push(renderBQ(blockquoteLines)); blockquoteLines = []; inBlockquote = false; }
-            parts.push('<hr class="result-hr">');
+            if (inBlockquote) {
+                parts.push(renderBlockquote(blockquoteLines));
+                blockquoteLines = [];
+                inBlockquote = false;
+            }
             continue;
         }
-        if (line.startsWith('> ')) { inBlockquote = true; blockquoteLines.push(line.slice(2)); continue; }
-        else if (inBlockquote) { parts.push(renderBQ(blockquoteLines)); blockquoteLines = []; inBlockquote = false; }
+
+        if (line.startsWith('> ')) {
+            inBlockquote = true;
+            blockquoteLines.push(line.slice(2));
+            continue;
+        } else if (inBlockquote) {
+            parts.push(renderBlockquote(blockquoteLines));
+            blockquoteLines = [];
+            inBlockquote = false;
+        }
 
         if (line.trim() === '') {
-            if (parts.length > 0 && !parts[parts.length - 1].includes('spacer'))
+            if (parts.length > 0 && !parts[parts.length - 1].includes('spacer')) {
                 parts.push('<div class="spacer"></div>');
+            }
             continue;
         }
+
         const sectionMatch = line.match(/^【(.+?)】$/);
-        if (sectionMatch) { parts.push(`<div class="section-header">${escapeHtml(sectionMatch[1])}</div>`); continue; }
-        if (line.startsWith('## ')) { parts.push(`<h2 class="result-h2">${applyInline(escapeHtml(line.slice(3)))}</h2>`); continue; }
-        if (line.startsWith('💡')) {
-            parts.push(`<div class="tip"><span class="tip-icon">💡</span><span>${applyInline(escapeHtml(line.slice(2).trim()))}</span></div>`);
+        if (sectionMatch) {
+            parts.push(`<div class="section-header">${escapeHtml(sectionMatch[1])}</div>`);
             continue;
         }
-        if (line.match(/^[-•]\s/)) { parts.push(`<div class="bullet-item"><span class="bullet-dot">•</span><span>${applyInline(escapeHtml(line.slice(2)))}</span></div>`); continue; }
-        if (line.startsWith('・')) { parts.push(`<div class="bullet-item"><span class="bullet-dot">•</span><span>${applyInline(escapeHtml(line.slice(1)))}</span></div>`); continue; }
-        if (line.startsWith('▶')) { parts.push(`<div class="usage-example"><span class="usage-mark">▶</span><span>${applyInline(escapeHtml(line.slice(1).trim()))}</span></div>`); continue; }
-        if (line.startsWith('→')) { parts.push(`<div class="arrow-line">→ ${applyInline(escapeHtml(line.slice(1).trim()))}</div>`); continue; }
+
+        if (line.startsWith('## ')) {
+            if (inWordBlock) parts.push('</div>');
+            parts.push('<div class="word-block">');
+            inWordBlock = true;
+            parts.push(`<h2 class="result-h2">${applyInline(escapeHtml(line.slice(3)))}</h2>`);
+            continue;
+        }
+
+        if (line.startsWith('💡')) {
+            const content = escapeHtml(line.slice(2).trim());
+            parts.push(`<div class="tip"><span class="tip-icon">💡</span><span>${applyInline(content)}</span></div>`);
+            continue;
+        }
+
+        if (line.match(/^[-•]\s/)) {
+            parts.push(`<div class="bullet-item"><span class="bullet-dot">•</span><span>${applyInline(escapeHtml(line.slice(2)))}</span></div>`);
+            continue;
+        }
+        if (line.startsWith('・')) {
+            const content = escapeHtml(line.slice(1));
+            parts.push(`<div class="bullet-item"><span class="bullet-dot">•</span><span>${applyInline(content)}</span></div>`);
+            continue;
+        }
+
+        if (line.startsWith('▶')) {
+            const content = escapeHtml(line.slice(1).trim());
+            parts.push(`<div class="usage-example"><span class="usage-mark">▶</span><span>${applyInline(content)}</span></div>`);
+            continue;
+        }
+
+        if (line.startsWith('→')) {
+            const content = escapeHtml(line.slice(1).trim());
+            parts.push(`<div class="arrow-line">→ ${applyInline(content)}</div>`);
+            continue;
+        }
+
         const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
-        if (numMatch) { parts.push(`<div class="numbered-item"><span class="num">${numMatch[1]}.</span><span>${applyInline(escapeHtml(numMatch[2]))}</span></div>`); continue; }
+        if (numMatch) {
+            parts.push(`<div class="numbered-item"><span class="num">${numMatch[1]}.</span><span>${applyInline(escapeHtml(numMatch[2]))}</span></div>`);
+            continue;
+        }
+
         parts.push(`<div class="text-line">${applyInline(escapeHtml(line))}</div>`);
     }
-    if (inBlockquote && blockquoteLines.length > 0) parts.push(renderBQ(blockquoteLines));
+
+    if (inBlockquote && blockquoteLines.length > 0) {
+        parts.push(renderBlockquote(blockquoteLines));
+    }
+    if (inWordBlock) parts.push('</div>');
+
     return parts.join('');
 }
 
-function renderBQ(lines: string[]): string {
-    return `<blockquote class="result-blockquote">${lines.map(t => `<div>${escapeHtml(t)}</div>`).join('')}</blockquote>`;
+function renderBlockquote(lines: string[]): string {
+    const content = lines.map((text) => {
+        let escaped = escapeHtml(text);
+        return `<div class="tutor-line"><span>${escaped}</span></div>`;
+    }).join('');
+    return `<blockquote class="result-blockquote tutor-blockquote">${content}</blockquote>`;
 }
 
 function buildDeepReadHtmlForCopy(items: DeepReadItem[], showChunks: boolean): string {
@@ -347,7 +406,8 @@ const DeepSentenceBlock = memo(({ item, showChunks }: {
 // ==========================================
 interface WritingPattern {
     en: string;
-    ja: string;
+    translation: string;
+    explanation: string;
 }
 interface WritingResult {
     writing: WritingPattern[];
@@ -363,12 +423,38 @@ function parseWritingResult(text: string): WritingResult {
         for (let i = 1; i < parts.length; i++) {
             const content = parts[i].replace(/<\/pattern\d+>[\s\S]*/, '');
             const en = content.match(/<en>([\s\S]*?)(?:<\/en>|$)/)?.[1]?.trim() || '';
-            const ja = content.match(/<ja>([\s\S]*?)(?:<\/ja>|$)/)?.[1]?.trim() || '';
-            if (en) patterns.push({ en, ja });
+            const translation = content.match(/<translation>([\s\S]*?)(?:<\/translation>|$)/)?.[1]?.trim() || '';
+            const explanation = content.match(/<explanation>([\s\S]*?)(?:<\/explanation>|$)/)?.[1]?.trim() || '';
+            if (en) patterns.push({ en, translation, explanation });
         }
         return patterns;
     }
     return { writing: parsePatterns(writingSection), speaking: parsePatterns(speakingSection) };
+}
+
+function renderExplanation(text: string): React.ReactNode {
+    if (!text) return null;
+    return text.split('\n').map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const bulletMatch = trimmed.match(/^[•・]\s*(.+)/);
+        if (bulletMatch) {
+            const content = bulletMatch[1];
+            const colonIdx = content.indexOf(':');
+            if (colonIdx > -1) {
+                const term = content.slice(0, colonIdx).trim();
+                const desc = content.slice(colonIdx + 1).trim();
+                return (
+                    <div key={i} className="writing-explanation-item">
+                        <span className="writing-explanation-term">{term}</span>
+                        <span className="writing-explanation-desc">{desc}</span>
+                    </div>
+                );
+            }
+            return <div key={i} className="writing-explanation-item"><span className="writing-explanation-desc">{content}</span></div>;
+        }
+        return <div key={i} className="writing-explanation-item"><span className="writing-explanation-desc">{trimmed}</span></div>;
+    });
 }
 
 const WritingResultDisplay = memo(({ result, mode }: { result: WritingResult; mode: 'writing' | 'speaking' }) => {
@@ -381,7 +467,20 @@ const WritingResultDisplay = memo(({ result, mode }: { result: WritingResult; mo
                 <div key={i} className="writing-pattern-block">
                     <div className="writing-pattern-header">{label} {i + 1}</div>
                     <div className="writing-pattern-en">{p.en}</div>
-                    {p.ja && <div className="writing-pattern-ja">{p.ja}</div>}
+                    {p.translation && (
+                        <div className="writing-pattern-translation">
+                            <span className="writing-translation-label">日本語訳</span>
+                            <span className="writing-translation-text">{p.translation}</span>
+                        </div>
+                    )}
+                    {p.explanation && (
+                        <div className="writing-pattern-explanation">
+                            <div className="writing-explanation-label">表現解説</div>
+                            <div className="writing-explanation-list">
+                                {renderExplanation(p.explanation)}
+                            </div>
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
@@ -481,12 +580,13 @@ function App() {
         }
     }, [view, fetchModels]);
 
-    // 結果がストリーム中は自動スクロール
+    // 結果画面表示時はトップにスクロール
     useEffect(() => {
-        if (!isDone && resultRef.current) {
-            resultRef.current.scrollTop = resultRef.current.scrollHeight;
+        if (view === 'result' && resultRef.current) {
+            resultRef.current.scrollTop = 0;
+            window.scrollTo(0, 0);
         }
-    }, [tutorSentences, tutorPreamble, deepReadItems, resultContent, isDone]);
+    }, [view]);
 
     // ==========================================
     // API呼び出し
@@ -675,13 +775,13 @@ function App() {
         if (activeFunction === 'writing' && writingResult) {
             const patterns = writingMode === 'writing' ? writingResult.writing : writingResult.speaking;
             const label = writingMode === 'writing' ? 'Writing' : 'Speaking';
-            return patterns.map((p, i) => `【${label} ${i + 1}】\n${p.en}${p.ja ? '\n' + p.ja : ''}`).join('\n\n');
+            return patterns.map((p, i) => `【${label} ${i + 1}】\n${p.en}${p.translation ? '\n' + p.translation : ''}${p.explanation ? '\n\n[解説]\n' + p.explanation : ''}`).join('\n\n');
         }
         if (activeFunction === 'words' && wordsMode === 'short' && wordsFullResult) {
             return shortenWordsResult(wordsFullResult);
         }
         return resultContent;
-    }, [activeFunction, tutorSentences, tutorPreamble, deepReadItems, showChunks, wordsMode, wordsFullResult, resultContent]);
+    }, [activeFunction, tutorSentences, tutorPreamble, deepReadItems, showChunks, wordsMode, wordsFullResult, resultContent, writingResult, writingMode]);
 
     const copyRichText = useCallback(async (): Promise<boolean> => {
         const plainText = getResultText();
@@ -693,7 +793,7 @@ function App() {
             const patterns = writingMode === 'writing' ? writingResult.writing : writingResult.speaking;
             const modeLabel = writingMode === 'writing' ? 'Writing' : 'Speaking';
             const parts = patterns.map((p, i) =>
-                `<div style="margin:12px 0;padding:12px 14px;border-left:3px solid #4a9eff;background:#f8faff;border-radius:0 6px 6px 0;"><div style="font-size:0.75em;font-weight:700;color:#4a9eff;margin-bottom:6px;">${modeLabel} ${i + 1}</div><div style="color:#1a3a5c;font-size:1em;line-height:1.7;">${escapeHtml(p.en)}</div>${p.ja ? `<div style="color:#666;font-size:0.85em;margin-top:6px;padding-top:6px;border-top:1px solid #dde6ff;">${escapeHtml(p.ja)}</div>` : ''}</div>`
+                `<div style="margin:12px 0;padding:12px 14px;border-left:3px solid #4a9eff;background:#f8faff;border-radius:0 6px 6px 0;"><div style="font-size:0.75em;font-weight:700;color:#4a9eff;margin-bottom:6px;">${modeLabel} ${i + 1}</div><div style="color:#1a3a5c;font-size:1em;line-height:1.7;">${escapeHtml(p.en)}</div>${p.translation ? `<div style="color:#333;font-size:0.9em;margin-top:8px;padding:6px 10px;background:#eef2ff;border-radius:4px;">${escapeHtml(p.translation)}</div>` : ''}${p.explanation ? `<div style="color:#555;font-size:0.82em;margin-top:8px;padding-top:8px;border-top:1px solid #dde6ff;white-space:pre-line;">${escapeHtml(p.explanation)}</div>` : ''}</div>`
             ).join('');
             htmlContent = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;line-height:1.7;color:#333;">${parts}</div>`;
         } else {
@@ -762,10 +862,10 @@ function App() {
     const displayModel = MODEL_DISPLAY_NAMES[model] || model;
 
     const functionLabel: Record<FunctionType, string> = {
-        words: 'English Words',
+        words: 'Words',
         tutor: 'Quick Read',
         deepread: 'Deep Read',
-        writing: 'English Writing',
+        writing: 'Translation',
     };
 
     const CEFR_OPTIONS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -1002,9 +1102,11 @@ function App() {
                     <div className="canvas-header">
                         <h2>INPUT TEXT</h2>
                         <div className="canvas-header-right">
-                            {sourceText && (
-                                <button className="clear-btn" onClick={() => setSourceText('')}>Clear</button>
-                            )}
+                            <button
+                                className="clear-btn"
+                                style={{ visibility: sourceText ? 'visible' : 'hidden' }}
+                                onClick={() => setSourceText('')}
+                            >Clear</button>
 
                             {/* CEFRレベル選択 */}
                             <div className="cefr-selector-wrap">
@@ -1081,7 +1183,7 @@ function App() {
                                 disabled={!sourceText.trim() || isLoading}
                             >
                                 <Search size={20} />
-                                <span>English Words<br /><small>単語と熟語の解説</small></span>
+                                <span>Words<br /><small>単語と熟語の解説</small></span>
                             </button>
                             <button
                                 className="action-btn tutor-btn"
@@ -1105,7 +1207,7 @@ function App() {
                                 disabled={!sourceText.trim() || isLoading}
                             >
                                 <PenLine size={20} />
-                                <span>English Writing<br /><small>日本語を英語に変換</small></span>
+                                <span>Translation<br /><small>日本語を英語に変換</small></span>
                             </button>
                         </div>
                     </div>

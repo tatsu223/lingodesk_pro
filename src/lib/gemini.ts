@@ -187,46 +187,33 @@ export function buildDeepReadPrompt(cefrLevel: string): string {
 // ==========================================
 export function buildWritingPrompt(cefrLevel: string): string {
     return `# Role
-あなたはプロの英語ライター・英会話コーチです。
+あなたはプロの英語コーチです。入力された日本語を英語に変換します。
 
-# Task
-入力された日本語テキストを英語に変換し、使用した単語・表現の詳しい解説も提供してください。対象CEFRレベルは${cefrLevel}です。
+CEFR レベル: ${cefrLevel}
+そのレベルに適した語彙・表現・文構造を使うこと。
 
-# Output Format
-以下の形式で出力してください（挨拶・メタ発言不要。直接[WRITING_START]から開始）：
+以下の2つのセクションを必ず出力してください:
+
+1. Writing 用（2パターン）: 書き言葉として自然で正確な英語
+2. Speaking 用（3パターン）: 会話・スピーキングで自然な英語
+
+出力フォーマットを厳守すること。挨拶・メタ発言は一切不要。
 
 [WRITING_START]
-<pattern1>
-<en>（ライティング向け英文パターン1）</en>
-<translation>（上記英文の自然な日本語訳）</translation>
-<explanation>（この英文で使用したキーとなる単語・表現・文法を箇条書きで解説。各項目は「• 表現: 意味・ニュアンス・使い方」の形式。3〜5項目程度。）</explanation>
-</pattern1>
-<pattern2>
-<en>（ライティング向け英文パターン2・別の語彙・構文で表現）</en>
-<translation>（上記英文の自然な日本語訳）</translation>
-<explanation>（この英文で使用したキーとなる単語・表現・文法を箇条書きで解説。各項目は「• 表現: 意味・ニュアンス・使い方」の形式。3〜5項目程度。）</explanation>
-</pattern2>
+<pattern1>Writing英文1</pattern1>
+<note1>ポイント（日本語・1〜2文）</note1>
+<pattern2>Writing英文2（別の表現・語彙）</pattern2>
+<note2>ポイント（日本語・1〜2文）</note2>
 [WRITING_END]
-[SPEAKING_START]
-<pattern1>
-<en>（スピーキング向け英文パターン1・口語的・自然な会話表現）</en>
-<translation>（上記英文の自然な日本語訳）</translation>
-<explanation>（この英文で使用したキーとなる単語・表現・文法を箇条書きで解説。各項目は「• 表現: 意味・ニュアンス・使い方」の形式。3〜5項目程度。）</explanation>
-</pattern1>
-<pattern2>
-<en>（スピーキング向け英文パターン2・別の口語表現）</en>
-<translation>（上記英文の自然な日本語訳）</translation>
-<explanation>（この英文で使用したキーとなる単語・表現・文法を箇条書きで解説。各項目は「• 表現: 意味・ニュアンス・使い方」の形式。3〜5項目程度。）</explanation>
-</pattern2>
-[SPEAKING_END]
 
-# Rules
-- CEFRレベル${cefrLevel}に適した語彙・文法を使用すること
-- Writing（書き言葉）は2パターン：フォーマル/セミフォーマルな正確な英文
-- Speaking（話し言葉）は2パターン：自然でカジュアルな口語英文
-- <translation>は英文を直訳せず自然な日本語に
-- <explanation>は英訳に使った表現を中心に、意味・ニュアンス・使用場面を詳しく解説すること
-- 長文・複数文の場合も全体を適切に英訳すること`;
+[SPEAKING_START]
+<pattern1>Speaking英文1（カジュアル・口語的）</pattern1>
+<note1>ポイント（日本語・1〜2文）</note1>
+<pattern2>Speaking英文2（別の表現）</pattern2>
+<note2>ポイント（日本語・1〜2文）</note2>
+<pattern3>Speaking英文3（さらに別の表現）</pattern3>
+<note3>ポイント（日本語・1〜2文）</note3>
+[SPEAKING_END]`;
 }
 
 // ==========================================

@@ -507,9 +507,9 @@ body {
 }
 
 .writing-btn:hover:not(:disabled) {
-  background: rgba(79, 70, 229, 0.06);
-  border-color: rgba(79, 70, 229, 0.3);
-  color: var(--accent-indigo);
+  background: rgba(230, 126, 34, 0.06);
+  border-color: rgba(230, 126, 34, 0.3);
+  color: #e67e22;
 }
 
 /* ==========================================
@@ -1448,4 +1448,80 @@ body {
   .model-name {
     max-width: 110px;
   }
+}
+
+/* ==========================================
+   English Writing Results
+   ========================================== */
+.writing-result {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.writing-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.writing-pattern-block {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.writing-pattern-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.writing-pattern-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-indigo);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  background: rgba(79, 70, 229, 0.08);
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.writing-pattern-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-weight: 500;
+  border-left: 4px solid var(--accent-indigo);
+  padding-left: 16px;
+}
+
+.writing-pattern-note {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  padding: 14px 18px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.writing-pattern-note::before {
+  content: "Note";
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }

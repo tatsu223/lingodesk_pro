@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { BookOpen, Search, BookMarked, Settings, ArrowLeft, Key, ChevronDown, Copy, Check, Mail, Share2, Sparkles, PenLine } from 'lucide-react';
 import {
     analyzeTextStream,
@@ -316,7 +316,7 @@ const TutorSentenceBlock = memo(({ sentence, showChunks }: {
             <div className="tutor-line">
                 <span dangerouslySetInnerHTML={{
                     __html: applyInline(escapeHtml(showChunks ? (sentence.chunkedEn || sentence.original) : sentence.original))
-                        .replace(/／/g, '<span class="chunk-slash">／</span>')
+                        .replace(/[／/]/g, '<span class="chunk-slash">／</span>')
                 }} />
             </div>
         </blockquote>
@@ -324,7 +324,7 @@ const TutorSentenceBlock = memo(({ sentence, showChunks }: {
             className={`text-line ${showChunks ? 'chunked-text' : 'natural-text'}`}
             dangerouslySetInnerHTML={{
                 __html: applyInline(escapeHtml(showChunks ? (sentence.chunkedJa || sentence.natural) : sentence.natural))
-                    .replace(/／/g, '<span class="chunk-slash">／</span>')
+                    .replace(/[／/]/g, '<span class="chunk-slash">／</span>')
             }}
         />
         <hr className="result-hr" />
@@ -405,13 +405,12 @@ const DeepSentenceBlock = memo(({ item, showChunks }: {
 // English Writing: 型・パーサー・コンポーネント
 // ==========================================
 interface WritingPattern {
-    en: string;
-    translation: string;
-    explanation: string;
+    text: string;
+    note: string;
 }
 interface WritingResult {
-    writing: WritingPattern[];
-    speaking: WritingPattern[];
+    writingPatterns: WritingPattern[];
+    speakingPatterns: WritingPattern[];
 }
 
 function parseWritingResult(text: string): WritingResult {
@@ -419,67 +418,42 @@ function parseWritingResult(text: string): WritingResult {
     const speakingSection = text.match(/\[SPEAKING_START\]([\s\S]*?)(?:\[SPEAKING_END\]|$)/)?.[1] || '';
     function parsePatterns(section: string): WritingPattern[] {
         const patterns: WritingPattern[] = [];
-        const parts = section.split(/<pattern\d+>/);
-        for (let i = 1; i < parts.length; i++) {
-            const content = parts[i].replace(/<\/pattern\d+>[\s\S]*/, '');
-            const en = content.match(/<en>([\s\S]*?)(?:<\/en>|$)/)?.[1]?.trim() || '';
-            const translation = content.match(/<translation>([\s\S]*?)(?:<\/translation>|$)/)?.[1]?.trim() || '';
-            const explanation = content.match(/<explanation>([\s\S]*?)(?:<\/explanation>|$)/)?.[1]?.trim() || '';
-            if (en) patterns.push({ en, translation, explanation });
+        const regex = /<pattern(\d+)>([\s\S]*?)<\/pattern\1>[\s\S]*?<note\1>([\s\S]*?)<\/note\1>/g;
+        let match;
+        while ((match = regex.exec(section)) !== null) {
+            patterns.push({ text: match[2].trim(), note: match[3].trim() });
+        }
+        // フォールバック: タグが完全に閉じていないストリーミング中のパース
+        if (patterns.length === 0) {
+            const patternParts = section.split(/<pattern\d+>/);
+            for (let i = 1; i < patternParts.length; i++) {
+                const part = patternParts[i];
+                const text = part.split(/<\/pattern\d+>/)[0].trim();
+                const notePart = part.split(/<note\d+>/)[1] || '';
+                const note = notePart.split(/<\/note\d+>/)[0].trim();
+                if (text) patterns.push({ text, note });
+            }
         }
         return patterns;
     }
-    return { writing: parsePatterns(writingSection), speaking: parsePatterns(speakingSection) };
+    return { writingPatterns: parsePatterns(writingSection), speakingPatterns: parsePatterns(speakingSection) };
 }
 
-function renderExplanation(text: string): React.ReactNode {
-    if (!text) return null;
-    return text.split('\n').map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
-        const bulletMatch = trimmed.match(/^[•・]\s*(.+)/);
-        if (bulletMatch) {
-            const content = bulletMatch[1];
-            const colonIdx = content.indexOf(':');
-            if (colonIdx > -1) {
-                const term = content.slice(0, colonIdx).trim();
-                const desc = content.slice(colonIdx + 1).trim();
-                return (
-                    <div key={i} className="writing-explanation-item">
-                        <span className="writing-explanation-term">{term}</span>
-                        <span className="writing-explanation-desc">{desc}</span>
-                    </div>
-                );
-            }
-            return <div key={i} className="writing-explanation-item"><span className="writing-explanation-desc">{content}</span></div>;
-        }
-        return <div key={i} className="writing-explanation-item"><span className="writing-explanation-desc">{trimmed}</span></div>;
-    });
-}
+
 
 const WritingResultDisplay = memo(({ result, mode }: { result: WritingResult; mode: 'writing' | 'speaking' }) => {
-    const patterns = mode === 'writing' ? result.writing : result.speaking;
+    const patterns = mode === 'writing' ? result.writingPatterns : result.speakingPatterns;
     const label = mode === 'writing' ? 'Writing' : 'Speaking';
     if (patterns.length === 0) return <div className="text-line" style={{ color: 'var(--text-secondary)', padding: '12px 0' }}>解析中...</div>;
     return (
         <div className="writing-result">
+            <div className="writing-section-title">{mode === 'writing' ? '✍️ Writing' : '🗣️ Speaking'}</div>
             {patterns.map((p, i) => (
                 <div key={i} className="writing-pattern-block">
-                    <div className="writing-pattern-header">{label} {i + 1}</div>
-                    <div className="writing-pattern-en">{p.en}</div>
-                    {p.translation && (
-                        <div className="writing-pattern-translation">
-                            <span className="writing-translation-label">日本語訳</span>
-                            <span className="writing-translation-text">{p.translation}</span>
-                        </div>
-                    )}
-                    {p.explanation && (
-                        <div className="writing-pattern-explanation">
-                            <div className="writing-explanation-label">表現解説</div>
-                            <div className="writing-explanation-list">
-                                {renderExplanation(p.explanation)}
-                            </div>
-                        </div>
+                    <div className="writing-pattern-num">{label} {i + 1}</div>
+                    <div className="writing-pattern-text">{p.text}</div>
+                    {p.note && (
+                        <div className="writing-pattern-note">{p.note}</div>
                     )}
                 </div>
             ))}
@@ -591,8 +565,15 @@ function App() {
     // ==========================================
     // API呼び出し
     // ==========================================
+    const MAX_INPUT_LENGTH = 30000;
+
     const handleExecute = async (type: FunctionType) => {
         if (!sourceText.trim()) return;
+        if (sourceText.length > MAX_INPUT_LENGTH) {
+            setErrorMessage(`テキストが長すぎます（最大 ${MAX_INPUT_LENGTH.toLocaleString()} 文字）。短くしてから再試行してください。`);
+            setView('result');
+            return;
+        }
         const storedKey = localStorage.getItem('lingodesk_apikey');
         if (!storedKey) { setView('settings'); return; }
 
@@ -699,6 +680,10 @@ function App() {
             setSettingsStatus({ type: 'error', text: 'APIキーを入力してください' });
             return;
         }
+        if (!apiKey.trim().startsWith('AIza') || apiKey.trim().length < 20) {
+            setSettingsStatus({ type: 'error', text: 'APIキーの形式が正しくありません（AIza... で始まる文字列を入力してください）' });
+            return;
+        }
         localStorage.setItem('lingodesk_apikey', apiKey.trim());
         localStorage.setItem('lingodesk_model', model);
         localStorage.setItem('lingodesk_share_email', shareEmail.trim());
@@ -773,9 +758,9 @@ function App() {
             }).join('\n\n');
         }
         if (activeFunction === 'writing' && writingResult) {
-            const patterns = writingMode === 'writing' ? writingResult.writing : writingResult.speaking;
+            const patterns = writingMode === 'writing' ? writingResult.writingPatterns : writingResult.speakingPatterns;
             const label = writingMode === 'writing' ? 'Writing' : 'Speaking';
-            return patterns.map((p, i) => `【${label} ${i + 1}】\n${p.en}${p.translation ? '\n' + p.translation : ''}${p.explanation ? '\n\n[解説]\n' + p.explanation : ''}`).join('\n\n');
+            return patterns.map((p, i) => `【${label} ${i + 1}】\n${p.text}${p.note ? '\n\n[解説]\n' + p.note : ''}`).join('\n\n');
         }
         if (activeFunction === 'words' && wordsMode === 'short' && wordsFullResult) {
             return shortenWordsResult(wordsFullResult);
@@ -790,10 +775,10 @@ function App() {
         if (activeFunction === 'deepread') {
             htmlContent = buildDeepReadHtmlForCopy(deepReadItems, showChunks);
         } else if (activeFunction === 'writing' && writingResult) {
-            const patterns = writingMode === 'writing' ? writingResult.writing : writingResult.speaking;
+            const patterns = writingMode === 'writing' ? writingResult.writingPatterns : writingResult.speakingPatterns;
             const modeLabel = writingMode === 'writing' ? 'Writing' : 'Speaking';
             const parts = patterns.map((p, i) =>
-                `<div style="margin:12px 0;padding:12px 14px;border-left:3px solid #4a9eff;background:#f8faff;border-radius:0 6px 6px 0;"><div style="font-size:0.75em;font-weight:700;color:#4a9eff;margin-bottom:6px;">${modeLabel} ${i + 1}</div><div style="color:#1a3a5c;font-size:1em;line-height:1.7;">${escapeHtml(p.en)}</div>${p.translation ? `<div style="color:#333;font-size:0.9em;margin-top:8px;padding:6px 10px;background:#eef2ff;border-radius:4px;">${escapeHtml(p.translation)}</div>` : ''}${p.explanation ? `<div style="color:#555;font-size:0.82em;margin-top:8px;padding-top:8px;border-top:1px solid #dde6ff;white-space:pre-line;">${escapeHtml(p.explanation)}</div>` : ''}</div>`
+                `<div style="margin:12px 0;padding:12px 14px;border-left:3px solid #4a9eff;background:#f8faff;border-radius:0 6px 6px 0;"><div style="font-size:0.75em;font-weight:700;color:#4a9eff;margin-bottom:6px;">${modeLabel} ${i + 1}</div><div style="color:#1a3a5c;font-size:1em;line-height:1.7;">${escapeHtml(p.text)}</div>${p.note ? `<div style="color:#555;font-size:0.82em;margin-top:8px;padding-top:8px;border-top:1px solid #dde6ff;white-space:pre-line;">${escapeHtml(p.note)}</div>` : ''}</div>`
             ).join('');
             htmlContent = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;line-height:1.7;color:#333;">${parts}</div>`;
         } else {
@@ -862,10 +847,10 @@ function App() {
     const displayModel = MODEL_DISPLAY_NAMES[model] || model;
 
     const functionLabel: Record<FunctionType, string> = {
-        words: 'Words',
+        words: 'English Words',
         tutor: 'Quick Read',
         deepread: 'Deep Read',
-        writing: 'Translation',
+        writing: 'English Writing',
     };
 
     const CEFR_OPTIONS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -1058,7 +1043,7 @@ function App() {
                             )}
                         </div>
                     ) : activeFunction === 'writing' ? (
-                        <WritingResultDisplay result={writingResult || { writing: [], speaking: [] }} mode={writingMode} />
+                        <WritingResultDisplay result={writingResult || { writingPatterns: [], speakingPatterns: [] }} mode={writingMode} />
                     ) : displayContent ? (
                         <div className="result-content" dangerouslySetInnerHTML={{ __html: formatMarkdown(displayContent) }} />
                     ) : isDone ? (
@@ -1207,7 +1192,7 @@ function App() {
                                 disabled={!sourceText.trim() || isLoading}
                             >
                                 <PenLine size={20} />
-                                <span>Translation<br /><small>日本語を英語に変換</small></span>
+                                <span>English Writing<br /><small>日本語を英語に変換</small></span>
                             </button>
                         </div>
                     </div>
